@@ -37,6 +37,12 @@ example setup to use the bigtreetech SKR-Pico Stepper-Controller Board with Circ
 | GPIO28_ADC2 | ZDIR               |           |                | TMC2209 `Z`                                                                                                          |
 | GPIO29_ADC3 | SERVOS ADC3        | P11       | SERVOS         | goes directly to the SERVOS pin. NO PROTECTION! (additionally it is prepared but not placed to measure the 5V rail?) |
 |             |                    |           |                |                                                                                                                      |
+|             | RUN                | P9.1      | SWD            |                                                                                                                      |
+| SWCLK       | SWCLK              | P9.2      | SWD            |                                                                                                                      |
+|             | GND                | P9.3      | SWD            |                                                                                                                      |
+| SWDIO       | SWDIO              | P9.4      | SWD            |                                                                                                                      |
+|             | 3.3V               | P9.5      | SWD            |                                                                                                                      |
+|             |                    |           |                |                                                                                                                      |
 
 ### TMC2209 stepper driver
 
@@ -55,6 +61,16 @@ example setup to use the bigtreetech SKR-Pico Stepper-Controller Board with Circ
 
 TODO: verify UART address
 
+
+### how to connect I2C sensor  
+not so simple..
+you can get the 3.3V Power from the SWD pin-header (`P9 SWD`).
+PIN 3 is GND; PIN 5 is 3.3V
+you could map 
+    - GPIO0 for I2C0_SDA
+    - GPIO1 for I2C0_SCL
+these are available on `P5 5V_POWER` (the connector designed for connecting a RPI)
+https://electronics.stackexchange.com/a/687771/13800
 
 ## Helpfull links
 
