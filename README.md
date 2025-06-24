@@ -1,6 +1,8 @@
 # bigtreetech SKR-Pico
 
-example setup to use the bigtreetech SKR-Pico Stepper-Controller Board with CircuitPython and Arduino
+example setup & information collection to use the bigtreetech SKR-Pico Stepper-Controller Board with CircuitPython and Arduino
+
+
 
 ## Pin Mapping
 
@@ -71,6 +73,15 @@ you could map
     - GPIO1 for I2C0_SCL
 these are available on `P5 5V_POWER` (the connector designed for connecting a RPI)
 https://electronics.stackexchange.com/a/687771/13800
+
+## Arduino support
+[supported by `arduino-pico`](https://github.com/earlephilhower/arduino-pico) as of [release 4.6.0](https://github.com/earlephilhower/arduino-pico/releases/tag/4.6.0)
+🥳
+
+for available pin names have a look at the [`pins_arduino.h`](https://github.com/earlephilhower/arduino-pico/blob/master/variants/bigtreetech_SKR_Pico/pins_arduino.h) file.
+
+## CircuitPython
+TODO!
 
 ## Helpfull links
 
