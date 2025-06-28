@@ -17,12 +17,15 @@
 
 // for endTransmission return codes:
 // https://docs.arduino.cc/language-reference/en/functions/communication/wire/endTransmission/#returns
-const uint8_t WIRE_TRANSMISSION_SUCCESS = 0;
-const uint8_t WIRE_TRANSMISSION_DATATOLONG = 1;
-const uint8_t WIRE_TRANSMISSION_NACKONADDRESS = 2;
-const uint8_t WIRE_TRANSMISSION_NACKONDATA = 3;
-const uint8_t WIRE_TRANSMISSION_OTHERERROR = 4;
-const uint8_t WIRE_TRANSMISSION_TIMEOUT = 5;
+enum twi_state_t {
+    TWI_STATE_success = 0,
+    TWI_STATE_data_to_long = 1,
+    TWI_STATE_rec_NACK_on_address = 2,
+    TWI_STATE_rec_NACK_on_data = 3,
+    TWI_STATE_other_error = 4,
+    TWI_STATE_timeout = 5,
+    TWI_STATE_undefined = 99,
+};
 
 void printHEX(uint8_t value) {
     Serial.print("0x");
@@ -43,25 +46,25 @@ int scanI2CBus(TwoWire &wireX) {
         wireX.beginTransmission(address);
         error = wireX.endTransmission();
         switch (error) {
-        case WIRE_TRANSMISSION_SUCCESS: {
+        case TWI_STATE_success: {
             Serial.print("I2C device found at address ");
             printHEX(address);
             Serial.println();
             deviceCount++;
         } break;
-        case WIRE_TRANSMISSION_DATATOLONG: {
+        case TWI_STATE_data_to_long: {
             Serial.print("error: Data to Long.");
         } break;
-        case WIRE_TRANSMISSION_NACKONADDRESS: {
+        case TWI_STATE_rec_NACK_on_address: {
             // Serial.print("error: NACK on address transmission");
         } break;
-        case WIRE_TRANSMISSION_NACKONDATA: {
+        case TWI_STATE_rec_NACK_on_data: {
             Serial.print("error: NACK on data transmission");
         } break;
-        case WIRE_TRANSMISSION_OTHERERROR: {
+        case TWI_STATE_other_error: {
             // Serial.print("error: unknown.");
         } break;
-        case WIRE_TRANSMISSION_TIMEOUT: {
+        case TWI_STATE_timeout: {
             // Serial.print("error: timeout");
         } break;
         }
@@ -85,6 +88,10 @@ void setup() {
     Serial.println();
 
     Serial.println("setup `Wire`");
+    // PIN_WIRE_SDA == PIN_SERIAL1_TX == D0
+    // PIN_WIRE_SCL == PIN_SERIAL1_RX == D1
+    // Wire.setSDA(PIN_WIRE_SDA);
+    // Wire.setSCL(PIN_WIRE_SCL);
     Wire.begin();
 
     Serial.println("setup `Wire1`");

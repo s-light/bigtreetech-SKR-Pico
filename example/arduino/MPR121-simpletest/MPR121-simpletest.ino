@@ -41,6 +41,10 @@ void setup() {
   Serial.println("MPR121 Test. (MPR121-simpletest.ino)");
   
   Serial.println("startup `Wire`");
+  // PIN_WIRE_SDA == PIN_SERIAL1_TX == D0
+  // PIN_WIRE_SCL == PIN_SERIAL1_RX == D1
+  // Wire.setSDA(PIN_WIRE_SDA);
+  // Wire.setSCL(PIN_WIRE_SCL);
   Wire.begin();
   Serial.println("done.");
   delay(100);
