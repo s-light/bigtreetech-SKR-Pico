@@ -69,12 +69,14 @@ TODO: verify UART address
 
 
 ### how to connect I2C sensor  
-you can get the 3.3V Power from the SWD pin-header (`P9 SWD`).
-PIN 3 is GND; PIN 5 is 3.3V
+you can get the 3.3V Power from the SWD pin-header (`P9 SWD`).  
+PIN 3 is GND; PIN 5 is 3.3V  
 you could map 
+
     - GPIO0 for I2C0_SDA
     - GPIO1 for I2C0_SCL
-these are available on `P5 5V_POWER` (the connector designed for connecting a RPI)
+
+these are available on `P5 5V_POWER` (the connector designed for connecting a RPI)  
 https://electronics.stackexchange.com/a/687771/13800
 
 ### other IO options
