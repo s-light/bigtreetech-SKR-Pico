@@ -4,8 +4,9 @@
 
 #define NUM_LEDS NUM_NEOPIXEL
 #define DATA_PIN PIN_NEOPIXEL
-#define BRIGHTNESS 255
+#define BRIGHTNESS 100
 #define SATURATION 255
+uint8_t hueSpeed = 10;
 
 CRGB leds[NUM_LEDS];
 
@@ -16,12 +17,9 @@ void setup() {
 }
 
 void loop() {
-    for (int j = 0; j < 255; j++) {
-        for (int i = 0; i < NUM_LEDS; i++) {
-            leds[i] = CHSV(i - (j * 2), SATURATION, BRIGHTNESS);
-            // The higher the value 4 the less fade there is and vice versa
-        }
-        FastLED.show();
-        delay(25);
-    }
+    leds[0] = CHSV(beat8(hueSpeed, 255), SATURATION, BRIGHTNESS);
+    FastLED.show();
+    // alternative to the beat8 we can use a classic
+    // You can change the pattern speed here
+    // EVERY_N_MILLISECONDS(15) { hue++; }
 }
