@@ -11,7 +11,22 @@ Adafruit_MPR121 cap = Adafruit_MPR121();
 
 Adafruit_LIS3DH lis = Adafruit_LIS3DH(&Wire);
 
+// Smoothing factor for the low-pass filter
+const float alpha = 0.4;
 
+// Smoothing factor for the baseline update
+const float baselineAlpha = 0.008;
+
+// Baseline value
+float baseline = 0.0;
+
+// Filtered value of the accelerometer reading
+float filteredValue = 0.0;
+
+// Output value in the range 0 to 100
+int outputValue = 0;
+
+sensors_event_t event;
 
 void setup(void) {
     delay(1000);
@@ -40,13 +55,24 @@ void setup(void) {
     }
     Serial.println("LIS3DH found!");
 
-    // lis.setRange(LIS3DH_RANGE_4_G);   // 2, 4, 8 or 16 G!
 
+    // lis.setRange(LIS3DH_RANGE_4_G);   // 2, 4, 8 or 16 G!
+    // lis.setPerformanceMode(LIS3DH_MODE_LOW_POWER);
+    // lis.setDataRate(LIS3DH_DATARATE_50_HZ);
+
+    Serial.flush();
+    printConfig();
+    delay(5000);
+
+    lis.getEvent(&event);
+  baseline = event.acceleration.z;
+}
+
+void printConfig() {
     Serial.print("Range = ");
     Serial.print(2 << lis.getRange());
     Serial.println("G");
 
-    // lis.setPerformanceMode(LIS3DH_MODE_LOW_POWER);
     Serial.print("Performance mode set to: ");
     switch (lis.getPerformanceMode()) {
     case LIS3DH_MODE_NORMAL:
@@ -60,7 +86,6 @@ void setup(void) {
         break;
     }
 
-    // lis.setDataRate(LIS3DH_DATARATE_50_HZ);
     Serial.print("Data rate set to: ");
     switch (lis.getDataRate()) {
     case LIS3DH_DATARATE_1_HZ:
@@ -98,26 +123,38 @@ void setup(void) {
 }
 
 void loop() {
-    lis.read(); // get X Y and Z data at once
-    // Then print out the raw data
-    Serial.print(lis.x);
-    Serial.print(", ");
-    Serial.print(lis.y);
-    Serial.print(", ");
-    Serial.print(lis.z);
-    // Serial.print(", ")
+    lis.getEvent(&event);
 
-    /* Or....get a new sensor event, normalized */
-    // sensors_event_t event;
-    // lis.getEvent(&event);
+    float rawValue = event.acceleration.z;
 
-    // /* Display the results (acceleration is measured in m/s^2) */
-    // Serial.print("\t\tX: "); Serial.print(event.acceleration.x);
-    // Serial.print(" \tY: "); Serial.print(event.acceleration.y);
-    // Serial.print(" \tZ: "); Serial.print(event.acceleration.z);
-    // Serial.println(" m/s^2 ");
+    // Apply low-pass filter
+    filteredValue = alpha * rawValue + (1.0 - alpha) * filteredValue;
+
+    // Update the baseline continuously
+    baseline = baselineAlpha * rawValue + (1.0 - baselineAlpha) * baseline;
+
+    // Calculate the absolute value from the baseline
+    float absoluteValue = abs(filteredValue - baseline);
+
+    // Scale the absolute value to the range 0 to 100
+    outputValue = map(absoluteValue, 0, 16, 0, 10);
+
+    Serial.print(rawValue);
+    Serial.print(", ");
+    Serial.print(filteredValue);
+    Serial.print(", ");
+    Serial.print(baseline);
+    Serial.print(", ");
+    Serial.print(absoluteValue);
+    Serial.print(", ");
+    Serial.print(outputValue);
 
     Serial.println();
 
-    // delay(200);
+    delay(5);
+    if (Serial.available()) {
+        Serial.flush();
+        printConfig();
+        delay(5000);
+    }
 }

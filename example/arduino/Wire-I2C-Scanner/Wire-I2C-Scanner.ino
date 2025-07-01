@@ -88,10 +88,9 @@ void setup() {
     Serial.println();
 
     Serial.println("setup `Wire`");
-    // PIN_WIRE_SDA == PIN_SERIAL1_TX == D0
-    // PIN_WIRE_SCL == PIN_SERIAL1_RX == D1
-    // Wire.setSDA(PIN_WIRE_SDA);
-    // Wire.setSCL(PIN_WIRE_SCL);
+        Serial.println("with special pins SDA:D20 SCL:D29");
+    Wire.setSDA(D20); // LASER_PWM
+    Wire.setSCL(D29); // PIN_SERVOS
     Wire.begin();
 
     Serial.println("setup `Wire1`");
