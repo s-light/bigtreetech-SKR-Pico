@@ -2,7 +2,7 @@
 
 example setup & information collection to use the bigtreetech SKR-Pico Stepper-Controller Board with CircuitPython and Arduino
 
-
+![simple test setup](<images/20250628_222219.jpg>)
 
 ## Pin Mapping
 
