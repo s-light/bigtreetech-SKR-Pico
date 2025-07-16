@@ -5,9 +5,10 @@
 
 const int DELAY = 200;
 const int32_t VELOCITY = 200000;
+const int32_t VELOCITY_JUMP = 100000;
 // current values may need to be reduced to prevent overheating depending on
 // specific motor and power supply voltage
-const uint8_t RUN_CURRENT_PERCENT = 1;
+const uint8_t RUN_CURRENT_PERCENT = 5;
 
 // Instantiate TMC2209
 TMC2209 driverX;
@@ -43,13 +44,13 @@ void motorSetup() {
 
     driverX.enable();
 
-    moveToHome();
+    // moveToHome();
 
-    for (uint8_t i = 0; i < 10; i++) {
-        Serial.println("jump:");
-        jump();
-        delay(1000);
-    }
+    // for (uint8_t i = 0; i < 10; i++) {
+    //     Serial.println("jump:");
+    //     jump();
+    //     delay(1000);
+    // }
 
     // Serial.println("FastAccelStepper engine init..");
     // engine.init();
@@ -74,7 +75,7 @@ void moveToHome() {
     Serial.println("moveToHome..");
 
     Serial.println("setStallGuardThreshold 2");
-    driverX.setStallGuardThreshold(2);
+    driverX.setStallGuardThreshold(1);
 
     uint32_t stallGuard = driverX.getStallGuardResult();
     Serial.print("  stall_guard_result = ");
@@ -82,33 +83,33 @@ void moveToHome() {
 
     Serial.println("  enableInverseMotorDirection");
     driverX.enableInverseMotorDirection();
-    Serial.println("  moveAtVelocity 5000");
-    driverX.moveAtVelocity(5000);
-    Serial.println("  wait 20s");
-    for (uint8_t i = 0; i < 40; i++) {
-        delay(500);
-        stallGuard = driverX.getStallGuardResult();
-        Serial.print("  stall_guard_result = ");
-        Serial.println(stallGuard);
-        Serial.flush();
-    }
-    driverX.moveAtVelocity(0);
 
-    delay(1000);
+    // Serial.println("  moveAtVelocity 5000");
+    // driverX.moveAtVelocity(10000);
+    // Serial.println("  wait 1s");
+    // for (uint8_t i = 0; i < 10; i++) {
+    //     delay(100);
+    //     stallGuard = driverX.getStallGuardResult();
+    //     Serial.print("  stall_guard_result = ");
+    //     Serial.println(stallGuard);
+    //     Serial.flush();
+    // }
+    // driverX.moveAtVelocity(0);
+    // delay(1000);
 
     Serial.println("  homeing..");
     bool homeFound = false;
     bool timeOut = false;
     uint32_t startTime = millis();
     
-    driverX.moveAtVelocity(5000);
+    driverX.moveAtVelocity(10000);
 
     while ((!homeFound) || (timeOut)) {
         stallGuard = driverX.getStallGuardResult();
-        if (stallGuard < 100) {
+        if (stallGuard <= 1) {
             homeFound = true;
         }
-        if ((millis() - startTime) > 2000) {
+        if ((millis() - startTime) > 1000) {
             timeOut = true;
         }
         delay(1);
@@ -141,12 +142,12 @@ void moveToHome() {
 }
 
 void jump() {
-    driverX.moveAtVelocity(VELOCITY);
-    delay(50);
+    driverX.moveAtVelocity(VELOCITY_JUMP);
+    delay(200);
     driverX.moveAtVelocity(0);
     driverX.enableInverseMotorDirection();
-    driverX.moveAtVelocity(VELOCITY);
-    delay(50);
+    driverX.moveAtVelocity(VELOCITY_JUMP);
+    delay(200);
     driverX.moveAtVelocity(0);
     driverX.disableInverseMotorDirection();
 }
@@ -184,9 +185,9 @@ void motorUpdate() {
     if (millis() > (60 * 1000)) {
         setXVelocity(0);
     }
-    if (millis() > (70 * 1000)) {
-        driverX.disable();
-    }
+    // if (millis() > (70 * 1000)) {
+    //     driverX.disable();
+    // }
 }
 
 void setXVelocity(uint32_t velocity) {
