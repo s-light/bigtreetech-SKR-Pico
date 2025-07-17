@@ -68,11 +68,19 @@ uint16_t lasttouched = 0;
 uint16_t currtouched = 0;
 
 int sensormin = 8;
-int sensormax = 11;
+int sensormax = 9;
 
 const uint16_t plotTouched = 690;
 
 CRGB leds[NUM_NEOPIXEL];
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// helper
+
+// void writeRegisterRaw(uint8_t reg, uint8_t value) {
+//     Adafruit_BusIO_Register the_reg = Adafruit_BusIO_Register(i2c_dev, reg,
+//     1); the_reg.write(value);
+// }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // Menu System
@@ -81,13 +89,82 @@ CRGB leds[NUM_NEOPIXEL];
 slight_DebugMenu myDebugMenu(Serial, Serial, 15);
 
 boolean infoled_state = 0;
-const byte infoled_pin = 9; // D9
 
 unsigned long liveSign_TimeStamp_LastAction = 0;
 const uint16_t liveSign_UpdateInterval = 1000; // ms
 
-boolean liveSign_Serial_Enabled = 1;
-boolean liveSign_LED_Enabled = 1;
+boolean liveSign_Serial_Enabled = 0;
+boolean liveSign_LED_Enabled = 0;
+
+void setBaselineFiltering(Print &out, char *command) {
+    // https://www.nxp.com/docs/en/data-sheet/MPR121.pdf#page=12&zoom=180,-254,219
+    // https://www.nxp.com/docs/en/application-note/AN3891.pdf
+    out.print(F("\t base line filtering "));
+    char setting = command[0];
+    char scenario = command[1];
+    int value = atoi(&command[2]);
+    value = fl::clamp(value, 0, 255);
+    uint8_t reg = 0;
+    switch (setting) {
+    case 'm': {
+        out.print(" MaximumHalfDelta ");
+        value = fl::clamp(value, 1, 63);
+        switch (scenario) {
+        case 'r': {
+            out.print(" rising ");
+            reg = MPR121_MHDR;
+        } break;
+        case 'f': {
+            out.print(" falling ");
+            reg = MPR121_MHDF;
+        } break;
+        }
+    } break;
+    case 'c': {
+        out.print(" NoiseCountLimit ");
+        switch (scenario) {
+        case 'r': {
+            out.print(" rising ");
+            reg = MPR121_NCLR;
+        } break;
+        case 'f': {
+            out.print(" falling ");
+            reg = MPR121_NCLF;
+        } break;
+        case 't': {
+            out.print(" touch ");
+            reg = MPR121_NCLT;
+        } break;
+        }
+    } break;
+    case 'd': {
+        out.print(" FilterDelayCountLimit ");
+        switch (scenario) {
+        case 'r': {
+            out.print(" rising ");
+            reg = MPR121_FDLR;
+        } break;
+        case 'f': {
+            out.print(" falling ");
+            reg = MPR121_FDLF;
+        } break;
+        case 't': {
+            out.print(" touch ");
+            reg = MPR121_FDLT;
+        } break;
+        }
+    } break;
+    }
+    if (reg > 0) {
+        out.print(scenario);
+        out.print(" → ");
+        out.print(value);
+        cap.writeRegister(reg, value);
+    } else {
+        out.print(" invalid parameter 'scenario'");
+    }
+    out.println();
+}
 
 void printHelp(Print &out) {
     // help
@@ -100,11 +177,12 @@ void printHelp(Print &out) {
     out.println(F("\t 'i': sketch info"));
     out.println(F("\t 'y': toggle DebugOut livesign print"));
     out.println(F("\t 'Y': toggle DebugOut livesign LED"));
-    out.println(F("\t 'x': tests"));
     out.println();
+    out.println(F("\t 'd': dump_regs"));
     out.println(F("\t 'a': setAutoconfig (1=on, 0=off) 'a1'"));
     out.println(F("\t 'A': restart autoconfig 'A'"));
     out.println(F("\t 'f': setThresholds(touch, release) 'f255:255'"));
+    out.println(F("\t 'b': set baseline filtering X=m|c|d  Y=r|f|t  'fXY255'"));
     out.println();
     out.println(
         F("____________________________________________________________"));
@@ -138,14 +216,11 @@ void handleMenu_Main(slight_DebugMenu *pInstance) {
         out.print(F("\t liveSign_LED_Enabled:"));
         out.println(liveSign_LED_Enabled);
     } break;
-    case 'x': {
-        // get state
-        out.println(F("__________"));
-        out.println(F("Tests:"));
-
-        out.println(F("__________"));
-    } break;
     //---------------------------------------------------------------------
+    case 'd': {
+        out.println(F("\t dump_regs"));
+        dump_regs();
+    } break;
     case 'a': {
         out.println(F("\t setAutoconfig"));
         bool autoconfigEnable = atoi(&command[1]);
@@ -157,7 +232,7 @@ void handleMenu_Main(slight_DebugMenu *pInstance) {
         cap.setAutoconfig(autoconfigEnable);
     } break;
     case 'f': {
-        out.print(F("\t DemoFadeTo "));
+        out.print(F("\t setThresholds "));
         // convert part of string to int
         // (up to first char that is not a number)
         uint8_t touch = atoi(&command[1]);
@@ -181,6 +256,9 @@ void handleMenu_Main(slight_DebugMenu *pInstance) {
             out.println();
         }
         cap.setThresholds(touch, release);
+    } break;
+    case 'b': {
+        setBaselineFiltering(out, &command[1]);
     } break;
     //---------------------------------------------------------------------
     default: {
@@ -212,7 +290,7 @@ void liveSign() {
         if (liveSign_LED_Enabled) {
             infoled_state = !infoled_state;
             if (infoled_state) {
-                leds[0].green = 200;
+                leds[0].green = 50;
                 // leds[0] = CHSV(40, 255, 255);
                 FastLED.show();
             } else {
@@ -227,45 +305,42 @@ void liveSign() {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // sensor
 void setupSensor() {
-    cap.setThresholds(4, 2);
+    // cap.setThresholds(4, 2);
     cap.setAutoconfig(true);
+
+    // FFI 00 = take 6 samples (default)
+    // CDC 010000 = 16uA charge current (default)
+    // cap.writeRegister(MPR121_CONFIG1, 0b00010000);
+
+    // CDT 001 = 0.5 μs (default)
+    // SFI 10 = take 10 samples
+    // ESI 000 = 1ms interval
+    cap.writeRegister(MPR121_CONFIG2, 0b00110000);
+    // this reduces noise..
+
+    // noise count limit
+    cap.writeRegister(MPR121_NCLR, 3);
+    // filter delay count limit
+    cap.writeRegister(MPR121_FDLF, 50);
 }
 
 void plotSensor() {
-    currtouched = cap.touched();
-
     for (uint8_t i = sensormin; i < sensormax; i++) {
-        // if ((currtouched & _BV(i)) && !(lasttouched & _BV(i))) {
-        //   Serial.print(i);
-        //   Serial.println(" touched");
-        // }
-        // // if it *was* touched and now *isnt*, alert!
-        // if (!(currtouched & _BV(i)) && (lasttouched & _BV(i))) {
-        //   Serial.print(i);
-        //   Serial.println(" released");
-        // }
         if (!(currtouched & _BV(i))) {
             USBSer1.print(0);
         } else {
             USBSer1.print(plotTouched);
         }
         USBSer1.print(";");
-    }
 
-    for (uint8_t i = sensormin; i < sensormax; i++) {
-        USBSer1.print(cap.filteredData(i));
-        USBSer1.print(";");
-    }
-    //   USBSer1.println();
-    //   USBSer1.print("Base: ");
-    for (uint8_t i = sensormin; i < sensormax; i++) {
         USBSer1.print(cap.baselineData(i));
+        USBSer1.print(";");
+
+        USBSer1.print(cap.filteredData(i));
         USBSer1.print(";");
     }
 
     USBSer1.println();
-    // reset our state
-    lasttouched = currtouched;
 }
 
 void handleSensor() {
@@ -286,6 +361,7 @@ void handleSensor() {
             FastLED.show();
         }
     }
+    lasttouched = currtouched;
 }
 
 void dump_regs() {
@@ -328,37 +404,32 @@ void dump_regs() {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 void setup() {
     Serial.begin(115200);
+    USBSer1.begin(115200);
+    // If already enumerated, additional class driver begin() won't take effect
+    // until re-enumeration
+    if (TinyUSBDevice.mounted()) {
+        TinyUSBDevice.detach();
+        delay(10);
+        TinyUSBDevice.attach();
+    }
 
     FastLED.addLeds<WS2811, PIN_NEOPIXEL, GRB>(leds, NUM_NEOPIXEL);
-
-    // sketch setup `orange light`
     // for Hue-Color-Map see:
     // https://s-light.github.io/cp_magic_painter/docu/color_hue.svg
     // https://github.com/FastLED/FastLED/wiki/FastLED-HSV-Colors
-    for (uint8_t i = 0; i < 5; i++) {
-        leds[0] = CHSV(64, 255, 200);
-        FastLED.show();
-        delay(500);
-        leds[0] = CHSV(64, 255, 50);
-        FastLED.show();
-        delay(500);
-    }
-
-    const uint32_t start = millis();
-    while (!Serial && !((millis() - start) > 6000))
-        yield();
-
-    USBSer1.begin(115200);
     leds[0] = CHSV(140, 255, 255);
     FastLED.show();
 
-    // If already enumerated, additional class driver begin() won't take effect
-    // until re-enumeration
-    // if (TinyUSBDevice.mounted()) {
-    //     TinyUSBDevice.detach();
-    //     delay(10);
-    //     TinyUSBDevice.attach();
-    // }
+    const uint32_t start = millis();
+    while (!Serial && !((millis() - start) > 6000)) {
+        // yield();
+        leds[0] = CHSV(20, 255, 100);
+        FastLED.show();
+        delay(50);
+        leds[0] = CHSV(20, 255, 50);
+        FastLED.show();
+        delay(50);
+    }
 
     // serial setup done.
     // start I2C and sensor setup
@@ -399,6 +470,7 @@ void setup() {
 
 void loop() {
     myDebugMenu.update();
+    currtouched = cap.touched();
     handleSensor();
     plotSensor();
     liveSign();
